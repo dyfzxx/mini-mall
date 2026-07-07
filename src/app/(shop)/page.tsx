@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import ProductImage from "@/components/shop/product-image";
 
 interface HomePageProps {
   searchParams: Promise<{
@@ -145,8 +146,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             {products.map((product) => (
               <Link key={product.id} href={`/products/${product.id}`}>
                 <Card className="h-full overflow-hidden hover:shadow-lg transition-shadow">
-                  <div className="aspect-[4/3] bg-muted flex items-center justify-center text-muted-foreground">
-                    {product.name}
+                  <div className="aspect-[4/3]">
+                    <ProductImage src={product.imageUrl} alt={product.name} className="rounded-t-xl" />
                   </div>
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground mb-1">{product.category.name}</p>

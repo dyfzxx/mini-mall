@@ -1,23 +1,87 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { updateProduct } from "@/actions/products";
+import ProductImageUpload from "@/components/admin/product-image-upload";
 
-export default async function EditProductPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const product = await prisma.product.findUnique({ where: { id: Number(id) } });
-  if (!product) notFound();
+interface Category {
+  id: number; name: string;
+}
 
-  const categories = await prisma.category.findMany();
+interface Product {
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  categoryId: number;
+  imageUrl: string | null;
+  isActive: boolean;
+}
+
+export default function EditProductPage() {
+  const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/admin/categories").then((r) => r.json()),
+      fetch(`/api/admin/products/${id}`).then((r) => r.json()),
+    ]).then(([cats, prod]) => {
+      setCategories(cats.data || []);
+      setProduct(prod.data || null);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, [id]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+
+    const form = event.currentTarget;
+    const data = {
+      name: (form.elements.namedItem("name") as HTMLInputElement).value,
+      description: (form.elements.namedItem("description") as HTMLTextAreaElement).value,
+      price: Number((form.elements.namedItem("price") as HTMLInputElement).value),
+      stock: Number((form.elements.namedItem("stock") as HTMLInputElement).value),
+      categoryId: Number((form.elements.namedItem("categoryId") as HTMLSelectElement).value),
+      imageUrl: (form.elements.namedItem("imageUrl") as HTMLInputElement).value || null,
+      isActive: (form.elements.namedItem("isActive") as HTMLSelectElement).value === "true",
+    };
+
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        router.push("/admin/products");
+        router.refresh();
+      } else {
+        setError(result.error || "更新失败");
+      }
+    } catch {
+      setError("网络错误");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) return <div className="text-muted-foreground">加载中...</div>;
+  if (!product) return <div className="text-destructive">商品不存在</div>;
 
   return (
     <div className="max-w-2xl">
@@ -28,7 +92,7 @@ export default async function EditProductPage({
 
       <Card>
         <CardContent className="pt-6">
-          <form action={updateProduct.bind(null, product.id)} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">商品名称</Label>
               <Input id="name" name="name" defaultValue={product.name} required />
@@ -56,10 +120,7 @@ export default async function EditProductPage({
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="imageUrl">图片URL</Label>
-              <Input id="imageUrl" name="imageUrl" defaultValue={product.imageUrl || ""} />
-            </div>
+            <ProductImageUpload currentUrl={product.imageUrl} inputName="imageUrl" />
             <div className="space-y-2">
               <Label htmlFor="isActive">状态</Label>
               <select id="isActive" name="isActive" defaultValue={product.isActive ? "true" : "false"}
@@ -68,8 +129,11 @@ export default async function EditProductPage({
                 <option value="false">下架</option>
               </select>
             </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <div className="flex gap-3">
-              <Button type="submit">保存</Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "保存中..." : "保存"}
+              </Button>
               <Link href="/admin/products"><Button variant="outline" type="button">取消</Button></Link>
             </div>
           </form>

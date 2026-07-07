@@ -42,20 +42,20 @@ async function seed() {
   ]);
   console.log("Categories created:", categories.length);
 
-  // 创建商品
+  // 创建商品（部分含示例图片）
   const products = [
-    { name: "iPhone 16", description: "最新款苹果手机", price: 6999, stock: 50, categoryId: categories[0].id },
-    { name: "MacBook Pro", description: "14寸 M4 Pro 芯片", price: 14999, stock: 20, categoryId: categories[0].id },
-    { name: "AirPods Pro", description: "主动降噪耳机", price: 1899, stock: 100, categoryId: categories[0].id },
-    { name: "男士休闲夹克", description: "春秋款时尚夹克", price: 399, stock: 200, categoryId: categories[1].id },
-    { name: "女士连衣裙", description: "夏季碎花连衣裙", price: 299, stock: 150, categoryId: categories[1].id },
-    { name: "有机坚果礼盒", description: "精选混合坚果 500g", price: 89, stock: 500, categoryId: categories[2].id },
-    { name: "进口咖啡豆", description: "哥伦比亚单品咖啡豆 250g", price: 128, stock: 300, categoryId: categories[2].id },
-    { name: "智能台灯", description: "护眼LED台灯，可调色温", price: 259, stock: 80, categoryId: categories[3].id },
-    { name: "纯棉四件套", description: "60支长绒棉床上用品", price: 599, stock: 60, categoryId: categories[3].id },
-    { name: "机械键盘", description: "Cherry MX 红轴 87键", price: 699, stock: 40, categoryId: categories[0].id },
-    { name: "运动跑鞋", description: "透气减震跑步鞋", price: 459, stock: 120, categoryId: categories[1].id },
-    { name: "保温杯", description: "316不锈钢 500ml", price: 149, stock: 200, categoryId: categories[3].id },
+    { name: "iPhone 16", description: "最新款苹果手机", price: 6999, stock: 50, categoryId: categories[0].id, imageUrl: "https://picsum.photos/seed/iphone/400/300" },
+    { name: "MacBook Pro", description: "14寸 M4 Pro 芯片", price: 14999, stock: 20, categoryId: categories[0].id, imageUrl: "https://picsum.photos/seed/macbook/400/300" },
+    { name: "AirPods Pro", description: "主动降噪耳机", price: 1899, stock: 100, categoryId: categories[0].id, imageUrl: "https://picsum.photos/seed/airpods/400/300" },
+    { name: "男士休闲夹克", description: "春秋款时尚夹克", price: 399, stock: 200, categoryId: categories[1].id, imageUrl: "https://picsum.photos/seed/jacket/400/300" },
+    { name: "女士连衣裙", description: "夏季碎花连衣裙", price: 299, stock: 150, categoryId: categories[1].id, imageUrl: "https://picsum.photos/seed/dress/400/300" },
+    { name: "有机坚果礼盒", description: "精选混合坚果 500g", price: 89, stock: 500, categoryId: categories[2].id, imageUrl: "https://picsum.photos/seed/nuts/400/300" },
+    { name: "进口咖啡豆", description: "哥伦比亚单品咖啡豆 250g", price: 128, stock: 300, categoryId: categories[2].id, imageUrl: "https://picsum.photos/seed/coffee/400/300" },
+    { name: "智能台灯", description: "护眼LED台灯，可调色温", price: 259, stock: 80, categoryId: categories[3].id, imageUrl: "https://picsum.photos/seed/lamp/400/300" },
+    { name: "纯棉四件套", description: "60支长绒棉床上用品", price: 599, stock: 60, categoryId: categories[3].id, imageUrl: "https://picsum.photos/seed/bedding/400/300" },
+    { name: "机械键盘", description: "Cherry MX 红轴 87键", price: 699, stock: 40, categoryId: categories[0].id, imageUrl: "https://picsum.photos/seed/keyboard/400/300" },
+    { name: "运动跑鞋", description: "透气减震跑步鞋", price: 459, stock: 120, categoryId: categories[1].id, imageUrl: "https://picsum.photos/seed/shoes/400/300" },
+    { name: "保温杯", description: "316不锈钢 500ml", price: 149, stock: 200, categoryId: categories[3].id, imageUrl: null },
   ];
 
   for (const product of products) {

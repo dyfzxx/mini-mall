@@ -1,38 +1,114 @@
-import { prisma } from "@/lib/prisma";
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { createCategory, updateCategory, deleteCategory } from "@/actions/products";
 
-export default async function AdminCategoriesPage() {
-  const categories = await prisma.category.findMany({
-    include: { _count: { select: { products: true } } },
-    orderBy: { createdAt: "desc" },
-  });
+interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  _count?: { products: number };
+  products?: { id: number }[];
+}
+
+export default function AdminCategoriesPage() {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/categories");
+      const result = await res.json();
+      setCategories(result.data || []);
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchCategories(); }, [fetchCategories]);
+
+  async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setSubmitting(true);
+
+    const form = event.currentTarget;
+    const data = {
+      name: (form.elements.namedItem("name") as HTMLInputElement).value,
+      slug: (form.elements.namedItem("slug") as HTMLInputElement).value,
+    };
+
+    try {
+      const res = await fetch("/api/admin/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        form.reset();
+        fetchCategories();
+      } else {
+        setError(result.error || "创建失败");
+      }
+    } catch {
+      setError("网络错误");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(id: number) {
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/admin/categories/${id}`, { method: "DELETE" });
+      const result = await res.json();
+      if (res.ok) {
+        fetchCategories();
+      } else {
+        alert(result.error || "删除失败");
+      }
+    } catch {
+      alert("网络错误");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  const productCount = (cat: Category) => cat._count?.products ?? cat.products?.length ?? 0;
+
+  if (loading) return <div className="text-muted-foreground">加载中...</div>;
 
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">分类管理</h1>
 
-      {/* New Category Form */}
+      {/* 新增分类表单 */}
       <Card className="mb-8">
         <CardContent className="pt-6">
-          <form action={createCategory} className="flex gap-3 items-end">
+          <form onSubmit={handleCreate} className="flex gap-3 items-end">
             <div className="space-y-2 flex-1">
               <Label htmlFor="name">分类名称</Label>
-              <Input id="name" name="name" placeholder="如: 电子产品" required />
+              <Input id="name" name="name" placeholder="如：电子产品" required />
             </div>
             <div className="space-y-2 flex-1">
-              <Label htmlFor="slug">标识 (英文)</Label>
-              <Input id="slug" name="slug" placeholder="如: electronics" required />
+              <Label htmlFor="slug">标识（英文）</Label>
+              <Input id="slug" name="slug" placeholder="如：electronics" required />
             </div>
-            <Button type="submit">添加分类</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "添加中..." : "添加分类"}
+            </Button>
           </form>
+          {error && <p className="text-sm text-destructive mt-2">{error}</p>}
         </CardContent>
       </Card>
 
-      {/* Category List */}
+      {/* 分类列表 */}
       <div className="border rounded-lg">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
@@ -50,14 +126,18 @@ export default async function AdminCategoriesPage() {
                 <td className="p-3">{cat.id}</td>
                 <td className="p-3 font-medium">{cat.name}</td>
                 <td className="p-3 font-mono text-xs text-muted-foreground">{cat.slug}</td>
-                <td className="p-3">{cat._count.products}</td>
+                <td className="p-3">{productCount(cat)}</td>
                 <td className="p-3 text-right">
-                  <form action={deleteCategory.bind(null, cat.id)} className="inline">
-                    <Button type="submit" variant="destructive" size="sm"
-                      disabled={cat._count.products > 0}>
-                      删除
-                    </Button>
-                  </form>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={deleting === cat.id}
+                    onClick={() => {
+                      if (confirm(`确定删除分类"${cat.name}"？`)) handleDelete(cat.id);
+                    }}
+                  >
+                    {deleting === cat.id ? "删除中..." : "删除"}
+                  </Button>
                 </td>
               </tr>
             ))}

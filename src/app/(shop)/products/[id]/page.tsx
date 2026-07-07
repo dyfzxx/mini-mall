@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { addToCart } from "@/actions/cart";
 import { getCurrentUser } from "@/lib/auth";
+import AddToCartButton from "@/components/shop/add-to-cart-button";
+import ProductImage from "@/components/shop/product-image";
 
 interface ProductDetailPageProps {
   params: Promise<{ id: string }>;
@@ -41,9 +42,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       <div className="grid md:grid-cols-2 gap-8">
         {/* 商品大图 */}
         <Card className="overflow-hidden">
-          <div className="aspect-square bg-muted flex items-center justify-center text-muted-foreground text-2xl">
-            {product.name}
-          </div>
+          <ProductImage src={product.imageUrl} alt={product.name} className="aspect-square" />
         </Card>
 
         {/* 商品信息 */}
@@ -69,27 +68,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </div>
 
           <div className="mt-auto space-y-3">
-            {user ? (
-              <form
-                action={async () => {
-                  "use server";
-                  await addToCart(product.id, 1);
-                }}
-              >
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full md:w-auto"
-                  disabled={product.stock === 0}
-                >
-                  加入购物车
-                </Button>
-              </form>
-            ) : (
-              <Link href={`/login?redirect=/products/${product.id}`}>
-                <Button size="lg" className="w-full md:w-auto">登录后购买</Button>
-              </Link>
-            )}
+            <AddToCartButton
+              productId={product.id}
+              disabled={product.stock === 0}
+              loggedIn={!!user}
+              className="w-full md:w-auto"
+            />
             <div>
               <Link href="/">
                 <Button variant="link" className="px-0">&larr; 返回商品列表</Button>

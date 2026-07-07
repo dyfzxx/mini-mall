@@ -1,24 +1,55 @@
-import Link from "next/link";
-import { prisma } from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
-import { deleteProduct } from "@/actions/products";
+"use client";
 
-export default async function AdminProductsPage() {
-  const products = await prisma.product.findMany({
-    include: { category: true },
-    orderBy: { createdAt: "desc" },
-  });
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+interface Category {
+  id: number; name: string; slug: string;
+}
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  stock: number;
+  isActive: boolean;
+  categoryId: number;
+  category: Category;
+  createdAt: string;
+}
+
+export default function AdminProductsPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/products");
+      const result = await res.json();
+      setProducts(result.data || []);
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  async function handleDelete(id: number) {
+    if (!confirm("确定删除该商品？")) return;
+    await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
+    fetchProducts();
+  }
+
+  if (loading) return <div className="text-muted-foreground">加载中...</div>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">商品管理</h1>
-        <Link href="/admin/products/new">
-          <Button>新增商品</Button>
-        </Link>
+        <Link href="/admin/products/new"><Button>新增商品</Button></Link>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/50">
             <tr>
@@ -36,7 +67,7 @@ export default async function AdminProductsPage() {
               <tr key={product.id} className="border-t">
                 <td className="p-3">{product.id}</td>
                 <td className="p-3 font-medium">{product.name}</td>
-                <td className="p-3 text-muted-foreground">{product.category.name}</td>
+                <td className="p-3 text-muted-foreground">{product.category?.name || "-"}</td>
                 <td className="p-3">¥{product.price}</td>
                 <td className="p-3">{product.stock}</td>
                 <td className="p-3">
@@ -48,9 +79,9 @@ export default async function AdminProductsPage() {
                   <Link href={`/admin/products/${product.id}/edit`}>
                     <Button variant="outline" size="sm">编辑</Button>
                   </Link>
-                  <form action={deleteProduct.bind(null, product.id)} className="inline">
-                    <Button type="submit" variant="destructive" size="sm">删除</Button>
-                  </form>
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(product.id)}>
+                    删除
+                  </Button>
                 </td>
               </tr>
             ))}
