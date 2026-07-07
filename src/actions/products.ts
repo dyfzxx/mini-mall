@@ -5,7 +5,6 @@ import { requireAdmin } from "@/lib/auth";
 import { productSchema, categorySchema } from "@/lib/validators";
 import { revalidatePath } from "next/cache";
 
-// ---- Products ----
 export async function createProduct(formData: FormData) {
   await requireAdmin();
   const data = productSchema.parse({
@@ -44,7 +43,6 @@ export async function deleteProduct(id: number) {
   revalidatePath("/admin/products");
 }
 
-// ---- Categories ----
 export async function createCategory(formData: FormData) {
   await requireAdmin();
   const data = categorySchema.parse({

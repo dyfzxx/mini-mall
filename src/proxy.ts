@@ -2,36 +2,45 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET ?? "minimall-dev-secret-change-in-production"
-);
+const COOKIE_NAME = "mini-mall-session";
 
-const adminPaths = ["/admin"];
-const authRequiredPaths = ["/cart", "/checkout", "/orders"];
-
-async function getUserRole(request: NextRequest): Promise<string | null> {
+function decodeSession(value: string): { userId: number; role: string } | null {
   try {
-    const token = request.cookies.get("mini-mall-token")?.value;
-    if (!token) return null;
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload.sub ? "USER" : null;
+    const payload = Buffer.from(value, "base64").toString("utf-8");
+    const session = JSON.parse(payload);
+    if (typeof session.userId !== "number" || typeof session.role !== "string") {
+      return null;
+    }
+    return session;
   } catch {
     return null;
   }
 }
 
-export default async function proxy(request: NextRequest) {
+async function getSessionFromRequest(request: NextRequest): Promise<{ userId: number; role: string } | null> {
+  const cookie = request.cookies.get(COOKIE_NAME)?.value;
+  if (!cookie) return null;
+  return decodeSession(cookie);
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const isAdminPath = adminPaths.some((p) => pathname.startsWith(p));
-  const isAuthRequired = authRequiredPaths.some((p) => pathname.startsWith(p));
+  const isAdminPath = pathname.startsWith("/admin");
+  const isAuthRequired = ["/cart", "/checkout", "/orders"].some((p) =>
+    pathname.startsWith(p)
+  );
 
   if (isAdminPath || isAuthRequired) {
-    const role = await getUserRole(request);
-    if (!role) {
+    const session = await getSessionFromRequest(request);
+    if (!session) {
       const loginUrl = new URL("/login", request.url);
       loginUrl.searchParams.set("redirect", pathname);
       return NextResponse.redirect(loginUrl);
+    }
+
+    if (isAdminPath && session.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 

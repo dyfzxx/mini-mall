@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSession } from "@/lib/auth";
+import { getCurrentUser, clearSession } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { getLevelLabel, type MembershipLevel } from "@/lib/membership";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,7 @@ export default async function ShopLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getSession();
+  const user = await getCurrentUser();
 
   return (
     <div className="flex flex-col min-h-full">
@@ -50,11 +50,12 @@ export default async function ShopLayout({
                     <Button variant="outline" size="sm">后台管理</Button>
                   </Link>
                 )}
-                <form action={async () => {
-                  "use server";
-                  const { clearSession } = await import("@/lib/auth");
-                  await clearSession();
-                }}>
+                <form
+                  action={async () => {
+                    "use server";
+                    await clearSession();
+                  }}
+                >
                   <Button variant="ghost" size="sm" type="submit">退出</Button>
                 </form>
               </>

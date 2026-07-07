@@ -9,7 +9,6 @@ import { redirect } from "next/navigation";
 export async function createOrder() {
   const user = await requireAuth();
 
-  // Get cart items with products
   const cartItems = await prisma.cartItem.findMany({
     where: { userId: user.id },
     include: { product: true },
@@ -19,14 +18,12 @@ export async function createOrder() {
     throw new Error("购物车为空");
   }
 
-  // Check stock
   for (const item of cartItems) {
     if (item.product.stock < item.quantity) {
       throw new Error(`${item.product.name} 库存不足`);
     }
   }
 
-  // Calculate prices
   const originalAmount = cartItems.reduce(
     (sum, item) => sum + item.product.price * item.quantity,
     0
@@ -35,7 +32,6 @@ export async function createOrder() {
   const totalAmount = Math.round(originalAmount * discountRate * 100) / 100;
   const orderNo = `${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
 
-  // Create order in transaction
   const order = await prisma.$transaction(async (tx) => {
     const newOrder = await tx.order.create({
       data: {
@@ -54,7 +50,6 @@ export async function createOrder() {
       },
     });
 
-    // Deduct stock
     for (const item of cartItems) {
       await tx.product.update({
         where: { id: item.productId },
@@ -62,7 +57,6 @@ export async function createOrder() {
       });
     }
 
-    // Clear cart
     await tx.cartItem.deleteMany({ where: { userId: user.id } });
 
     return newOrder;
@@ -119,7 +113,6 @@ export async function cancelOrder(orderId: number) {
     throw new Error("订单不存在或无法取消");
   }
 
-  // Restore stock
   await prisma.$transaction(async (tx) => {
     await tx.order.update({
       where: { id: orderId },

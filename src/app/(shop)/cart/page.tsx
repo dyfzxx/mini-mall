@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { updateCartQuantity, removeFromCart } from "@/actions/cart";
 
 export default async function CartPage() {
-  const user = await getSession();
+  const user = await getCurrentUser();
 
   if (!user) {
     return (
