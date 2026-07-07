@@ -80,7 +80,7 @@ export async function POST() {
     user.membershipLevel as MembershipLevel
   );
   const totalAmount = Math.round(originalAmount * discountRate * 100) / 100;
-  const orderNo = `${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+  const orderNo = `ORD-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
 
   // 事务：创建订单 + 扣库存 + 清空购物车
   const order = await prisma.$transaction(async (tx) => {
@@ -102,10 +102,13 @@ export async function POST() {
     });
 
     for (const item of cartItems) {
-      await tx.product.update({
-        where: { id: item.productId },
+      const result = await tx.product.updateMany({
+        where: { id: item.productId, stock: { gte: item.quantity } },
         data: { stock: { decrement: item.quantity } },
       });
+      if (result.count === 0) {
+        throw new Error(`商品 "${item.product.name}" 库存不足，无法下单`);
+      }
     }
 
     await tx.cartItem.deleteMany({ where: { userId: user.id } });

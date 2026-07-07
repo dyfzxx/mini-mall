@@ -10,8 +10,8 @@ import { prisma } from "@/lib/prisma";
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const search = searchParams.get("search") || "";
-  const categorySlug = searchParams.get("category") || "";
+  const search = (searchParams.get("search") || "").slice(0, 100);
+  const categorySlug = (searchParams.get("category") || "").slice(0, 50);
   const page = Number(searchParams.get("page")) || 1;
   const pageSize = 9;
 

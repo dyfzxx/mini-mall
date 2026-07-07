@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
 import { getLevelLabel, type MembershipLevel } from "@/lib/membership";
 
@@ -10,6 +11,7 @@ const levelColors: Record<string, string> = {
 };
 
 export default async function AdminUsersPage() {
+  await requireAdmin();
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { orders: true } } },

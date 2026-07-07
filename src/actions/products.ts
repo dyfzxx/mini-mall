@@ -39,7 +39,10 @@ export async function updateProduct(id: number, formData: FormData) {
 
 export async function deleteProduct(id: number) {
   await requireAdmin();
-  await prisma.product.delete({ where: { id } });
+  await prisma.product.update({
+    where: { id },
+    data: { isActive: false },
+  });
   revalidatePath("/admin/products");
 }
 

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { SignJWT, jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
 
 const SESSION_COOKIE = "mini-mall-session";
@@ -8,6 +9,15 @@ const SALT_ROUNDS = 10;
 export interface SessionUser {
   userId: number;
   role: string;
+}
+
+/** 获取 JWT 签名密钥（从环境变量读取，开发环境用 fallback） */
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET 环境变量未设置");
+  }
+  return new TextEncoder().encode(secret);
 }
 
 /**
@@ -25,12 +35,18 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 /**
- * 将 session 写入 httpOnly Cookie
+ * 将 session 写入 httpOnly Cookie（JWT 签名）
  */
 export async function setSession(userId: number, role: string): Promise<void> {
   const cookieStore = await cookies();
-  const payload = Buffer.from(JSON.stringify({ userId, role })).toString("base64");
-  cookieStore.set(SESSION_COOKIE, payload, {
+  const secret = getJwtSecret();
+  const token = await new SignJWT({ userId, role })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("7d")
+    .sign(secret);
+
+  cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -40,7 +56,7 @@ export async function setSession(userId: number, role: string): Promise<void> {
 }
 
 /**
- * 从 Cookie 读取当前 session 用户
+ * 从 Cookie 读取当前 session 用户（JWT 验证）
  */
 export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
@@ -48,8 +64,9 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!cookie?.value) return null;
 
   try {
-    const payload = Buffer.from(cookie.value, "base64").toString("utf-8");
-    const session = JSON.parse(payload) as SessionUser;
+    const secret = getJwtSecret();
+    const { payload } = await jwtVerify(cookie.value, secret);
+    const session = payload as unknown as SessionUser;
     if (typeof session.userId !== "number" || typeof session.role !== "string") {
       return null;
     }

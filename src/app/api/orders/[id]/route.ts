@@ -70,15 +70,12 @@ export async function PUT(
   const body = await request.json();
   const action = body.action as string | undefined;
 
-  if (!action || !["pay", "cancel", "ship", "complete"].includes(action)) {
+  if (!action || !["pay", "cancel"].includes(action)) {
     return NextResponse.json({ error: "无效的操作" }, { status: 400 });
   }
 
-  // 管理员可操作任意订单，普通用户仅自己的订单
-  const orderWhere =
-    user.role === "ADMIN"
-      ? { id: Number(id) }
-      : { id: Number(id), userId: user.id };
+  // 普通用户仅操作自己的订单
+  const orderWhere = { id: Number(id), userId: user.id };
 
   const order = await prisma.order.findFirst({
     where: orderWhere,
@@ -149,42 +146,6 @@ export async function PUT(
     });
 
     return NextResponse.json({ data: { status: "CANCELLED" } });
-  }
-
-  // 发货操作（需管理员）: PAID → SHIPPED
-  if (action === "ship") {
-    if (user.role !== "ADMIN") {
-      return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
-    }
-    if (order.status !== "PAID") {
-      return NextResponse.json(
-        { error: `当前状态 ${order.status} 不能发货` },
-        { status: 400 }
-      );
-    }
-    await prisma.order.update({
-      where: { id: Number(id) },
-      data: { status: "SHIPPED" },
-    });
-    return NextResponse.json({ data: { status: "SHIPPED" } });
-  }
-
-  // 完成操作（需管理员）: SHIPPED → COMPLETED
-  if (action === "complete") {
-    if (user.role !== "ADMIN") {
-      return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
-    }
-    if (order.status !== "SHIPPED") {
-      return NextResponse.json(
-        { error: `当前状态 ${order.status} 不能完成` },
-        { status: 400 }
-      );
-    }
-    await prisma.order.update({
-      where: { id: Number(id) },
-      data: { status: "COMPLETED" },
-    });
-    return NextResponse.json({ data: { status: "COMPLETED" } });
   }
 
   return NextResponse.json({ error: "未知操作" }, { status: 400 });

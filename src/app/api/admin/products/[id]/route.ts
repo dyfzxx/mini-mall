@@ -73,7 +73,10 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  await prisma.product.delete({ where: { id: Number(id) } });
+  await prisma.product.update({
+    where: { id: Number(id) },
+    data: { isActive: false },
+  });
 
-  return NextResponse.json({ data: "已删除" });
+  return NextResponse.json({ data: "已下架（软删除）" });
 }

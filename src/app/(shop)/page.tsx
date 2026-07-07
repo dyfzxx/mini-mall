@@ -16,8 +16,8 @@ interface HomePageProps {
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
-  const search = params.search || "";
-  const categorySlug = params.category || "";
+  const search = (params.search || "").slice(0, 100);
+  const categorySlug = (params.category || "").slice(0, 50);
   const page = Number(params.page) || 1;
   const pageSize = 9;
 

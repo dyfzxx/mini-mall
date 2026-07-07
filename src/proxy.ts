@@ -4,10 +4,20 @@ import { jwtVerify } from "jose";
 
 const COOKIE_NAME = "mini-mall-session";
 
-function decodeSession(value: string): { userId: number; role: string } | null {
+/** 获取 JWT 签名密钥 */
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET 环境变量未设置");
+  }
+  return new TextEncoder().encode(secret);
+}
+
+async function verifySessionFromCookie(value: string): Promise<{ userId: number; role: string } | null> {
   try {
-    const payload = Buffer.from(value, "base64").toString("utf-8");
-    const session = JSON.parse(payload);
+    const secret = getJwtSecret();
+    const { payload } = await jwtVerify(value, secret);
+    const session = payload as { userId: number; role: string };
     if (typeof session.userId !== "number" || typeof session.role !== "string") {
       return null;
     }
@@ -20,7 +30,7 @@ function decodeSession(value: string): { userId: number; role: string } | null {
 async function getSessionFromRequest(request: NextRequest): Promise<{ userId: number; role: string } | null> {
   const cookie = request.cookies.get(COOKIE_NAME)?.value;
   if (!cookie) return null;
-  return decodeSession(cookie);
+  return verifySessionFromCookie(cookie);
 }
 
 export async function proxy(request: NextRequest) {
